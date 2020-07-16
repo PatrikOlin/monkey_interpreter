@@ -5,14 +5,20 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/PatrikOlin/monkey_interpreter/evaluator"
 	"github.com/PatrikOlin/monkey_interpreter/lexer"
 	"github.com/PatrikOlin/monkey_interpreter/parser"
+	"github.com/PatrikOlin/monkey_interpreter/object"
 )
 
 const PROMPT = ">> "
+const TABLE_FLIPPED = `
+(╯°□°）╯︵ ┻━┻
+`
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
+	env := object.NewEnvironment()
 
 	for {
 		fmt.Fprintf(out, PROMPT)
@@ -31,14 +37,14 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		io.WriteString(out, program.String())
-		io.WriteString(out, "\n")
+		evaluated := evaluator.Eval(program, env)
+
+		if evaluated != nil {
+			io.WriteString(out, evaluated.Inspect())
+			io.WriteString(out, "\n")
+		}
 	}
 }
-
-const TABLE_FLIPPED = `
-(╯°□°）╯︵ ┻━┻
-`
 
 func printParserErrors(out io.Writer, errors []string) {
 	io.WriteString(out, TABLE_FLIPPED)
