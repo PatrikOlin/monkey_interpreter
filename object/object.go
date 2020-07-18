@@ -25,6 +25,8 @@ const (
 
 	FUNCTION_OBJ = "FUNCTION"
 	BUILTIN_OBJ  = "BUILTIN"
+
+	QUOTE_OBJ = "QUOTE"
 )
 
 type Object interface {
@@ -78,7 +80,7 @@ type HashPair struct {
 	Value Object
 }
 
-type Hash struct {							  
+type Hash struct {
 	Pairs map[HashKey]HashPair
 }
 
@@ -182,3 +184,10 @@ func (f *Function) Inspect() string {
 
 	return out.String()
 }
+
+type Quote struct {
+	Node ast.Node
+}
+
+func (q *Quote) Type() ObjectType { return QUOTE_OBJ }
+func (q *Quote) Inspect() string  { return "QUOTE(" + q.Node.String() + ")" }
