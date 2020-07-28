@@ -31,7 +31,6 @@ func TestMake(t *testing.T) {
 	}
 }
 
-
 func TestInstructionsString(t *testing.T) {
 	instructions := []Instructions{
 		Make(OpAdd),
@@ -57,8 +56,8 @@ func TestInstructionsString(t *testing.T) {
 
 func TestReadOperands(t *testing.T) {
 	tests := []struct {
-		op Opcode
-		operands []int
+		op        Opcode
+		operands  []int
 		bytesRead int
 	}{
 		{OpConstant, []int{65535}, 2},
