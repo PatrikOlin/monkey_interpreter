@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/PatrikOlin/monkey_interpreter/ast"
+	"github.com/PatrikOlin/monkey_interpreter/code"
 )
 
 type ObjectType string
@@ -26,8 +27,10 @@ const (
 	FUNCTION_OBJ = "FUNCTION"
 	BUILTIN_OBJ  = "BUILTIN"
 
-	QUOTE_OBJ = "QUOTE"						  
+	QUOTE_OBJ = "QUOTE"
 	MACRO_OBJ = "MACRO"
+
+	COMPILED_FUNCTION_OBJ = "COMPILED_FUNCTION_OBJ"
 )
 
 type Object interface {
@@ -216,4 +219,13 @@ func (m *Macro) Inspect() string {
 	out.WriteString("\n}")
 
 	return out.String()
+}
+
+type CompiledFunction struct {
+	Instructions code.Instructions
+}
+
+func (cf *CompiledFunction) Type() ObjectType { return COMPILED_FUNCTION_OBJ }
+func (cf *CompiledFunction) Inspect() string {
+	return fmt.Sprintf("CompiledFunction[%p]", cf)
 }
