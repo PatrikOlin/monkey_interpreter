@@ -13,14 +13,14 @@ const GlobalsSize = 65536
 const MaxFrames = 1024
 
 type VM struct {
-	constants    []object.Object
+	constants []object.Object
 
 	stack []object.Object
 	sp    int // Always points to the next value. Top of stack is stack[sp-1]
 
 	globals []object.Object
 
-	frames []*Frame
+	frames      []*Frame
 	framesIndex int
 }
 
@@ -36,14 +36,14 @@ func New(bytecode *compiler.Bytecode) *VM {
 	frames[0] = mainFrame
 
 	return &VM{
-		constants:    bytecode.Constants,
+		constants: bytecode.Constants,
 
 		stack: make([]object.Object, StackSize),
 		sp:    0,
 
 		globals: make([]object.Object, GlobalsSize),
 
-		frames: frames,
+		frames:      frames,
 		framesIndex: 1,
 	}
 }
@@ -54,7 +54,6 @@ func NewWithGlobalsStore(bytecode *compiler.Bytecode, s []object.Object) *VM {
 	return vm
 }
 
-
 func (vm *VM) StackTop() object.Object {
 	if vm.sp == 0 {
 		return nil
@@ -63,13 +62,12 @@ func (vm *VM) StackTop() object.Object {
 	return vm.stack[vm.sp-1]
 }
 
-
 func (vm *VM) Run() error {
 	var ip int
 	var ins code.Instructions
 	var op code.Opcode
-	
-	for vm.currentFrame().ip < len(vm.currentFrame().Instructions()) - 1 {
+
+	for vm.currentFrame().ip < len(vm.currentFrame().Instructions())-1 {
 		vm.currentFrame().ip++
 
 		ip = vm.currentFrame().ip
@@ -85,7 +83,7 @@ func (vm *VM) Run() error {
 			if err != nil {
 				return err
 			}
-			
+
 		case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv:
 			err := vm.executeBinaryOperation(op)
 			if err != nil {
@@ -108,7 +106,7 @@ func (vm *VM) Run() error {
 			}
 
 		case code.OpFalse:
-		 	err := vm.push(False)
+			err := vm.push(False)
 			if err != nil {
 				return err
 			}
@@ -210,13 +208,13 @@ func (vm *VM) Run() error {
 			}
 
 		case code.OpCall:
-			fn, ok := vm.stack[vm.sp-1].(*object.CompiledFunction)
-			if !ok {
-				return fmt.Errorf("calling non-function")
+			numArgs := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+
+			err := vm.callFunction(int(numArgs))
+			if err != nil {
+				return err
 			}
-			frame := NewFrame(fn, vm.sp)
-			vm.pushFrame(frame)
-			vm.sp = frame.basePointer + fn.NumLocals
 
 		case code.OpSetLocal:
 			localIndex := code.ReadUint8(ins[ip+1:])
@@ -224,7 +222,7 @@ func (vm *VM) Run() error {
 
 			frame := vm.currentFrame()
 
-			vm.stack[frame.basePointer + int(localIndex)] = vm.pop()
+			vm.stack[frame.basePointer+int(localIndex)] = vm.pop()
 
 		case code.OpGetLocal:
 			localIndex := code.ReadUint8(ins[ip+1:])
@@ -234,7 +232,7 @@ func (vm *VM) Run() error {
 
 			err := vm.push(vm.stack[frame.basePointer+int(localIndex)])
 			if err != nil {
-				return err		  
+				return err
 			}
 
 		case code.OpNull:
@@ -245,7 +243,7 @@ func (vm *VM) Run() error {
 
 		}
 	}
-		 
+
 	return nil
 }
 
@@ -255,7 +253,7 @@ func (vm *VM) LastPoppedStackElem() object.Object {
 
 func (vm *VM) push(o object.Object) error {
 	if vm.sp >= StackSize {
-		return fmt.Errorf("stack overflow") 
+		return fmt.Errorf("stack overflow")
 	}
 
 	vm.stack[vm.sp] = o
@@ -318,11 +316,11 @@ func (vm *VM) executeBinaryOperation(op code.Opcode) error {
 	right := vm.pop()
 	left := vm.pop()
 
-	leftType := left.Type() 
+	leftType := left.Type()
 	rightType := right.Type()
 
 	switch {
-	case leftType == object.INTEGER_OBJ && rightType == object.INTEGER_OBJ: 
+	case leftType == object.INTEGER_OBJ && rightType == object.INTEGER_OBJ:
 		return vm.executeBinaryIntegerOperation(op, left, right)
 	case leftType == object.STRING_OBJ && rightType == object.STRING_OBJ:
 		return vm.executeBinaryStringOperation(op, left, right)
@@ -386,7 +384,7 @@ func (vm *VM) executeComparison(op code.Opcode) error {
 		return vm.push(nativeBoolToBooleanObject(right != left))
 	default:
 		return fmt.Errorf("unknown operator: %d (%s %s)",
-		 	op, left.Type(), right.Type())
+			op, left.Type(), right.Type())
 	}
 }
 
@@ -415,14 +413,14 @@ func (vm *VM) executeBangOperator() error {
 	switch operand {
 	case True:
 		return vm.push(False)
-	case False: 
+	case False:
 		return vm.push(True)
 	case Null:
 		return vm.push(True)
 	default:
 		return vm.push(False)
 	}
-}					   
+}
 
 func (vm *VM) executeMinusOperator() error {
 	operand := vm.pop()
@@ -474,6 +472,25 @@ func (vm *VM) executeHashIndex(hash, index object.Object) error {
 	return vm.push(pair.Value)
 }
 
+func (vm *VM) callFunction(numArgs int) error {
+	fn, ok := vm.stack[vm.sp-1-numArgs].(*object.CompiledFunction)
+	if !ok {
+		return fmt.Errorf("calling non-function")
+	}
+
+	if numArgs != fn.NumParameters {
+		return fmt.Errorf("wrong number of arguments: want=%d, got=%d",
+			fn.NumParameters, numArgs)
+	}
+
+	frame := NewFrame(fn, vm.sp-numArgs)
+	vm.pushFrame(frame)
+									
+	vm.sp = frame.basePointer + fn.NumLocals
+
+	return nil
+}
+
 func nativeBoolToBooleanObject(input bool) *object.Boolean {
 	if input {
 		return True
@@ -491,8 +508,6 @@ func isTruthy(obj object.Object) bool {
 		return false
 
 	default:
-		return true	   
+		return true
 	}
 }
-		 
-		 
