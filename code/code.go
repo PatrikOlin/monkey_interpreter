@@ -48,6 +48,8 @@ const (
 
 	OpReturnValue
 	OpReturn
+
+	OpGetBuiltin
 )
 
 type Definition struct {
@@ -82,6 +84,7 @@ var definitions = map[Opcode]*Definition{
 	OpCall:          {"OpCall", []int{1}},
 	OpReturnValue:   {"OpReturnValue", []int{}},
 	OpReturn:        {"OpReturn", []int{}},
+	OpGetBuiltin:    {"OpGetBuilting", []int{1}},
 }
 
 func Lookup(op byte) (*Definition, error) {
@@ -114,7 +117,7 @@ func Make(op Opcode, operands ...int) []byte {
 		case 2:
 			binary.BigEndian.PutUint16(instruction[offset:], uint16(o))
 		case 1:
-			instruction[offset] = byte(o)	 
+			instruction[offset] = byte(o)
 		}
 		offset += width
 	}
